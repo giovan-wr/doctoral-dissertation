@@ -1,44 +1,13 @@
-setwd("C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Resultados/Experimento 1/R")
 rm(list=ls())
 
 library(tidyverse)
-library(officer)
-library(rvg)
 library(lme4)
 library(emmeans)
 library(ggpubr)
 
-#### Wrangling#####
-create_list <- function(x){
-  a <- read.csv(x,sep = ';') %>%
-    mutate(Speed=1/Chlat*1000,Trl=1:length(Trl))
-  a$Block<-factor(a$Block, levels=unique(a$Block))
-  a
-}
+setwd("C:/Users/Giovan WR/projects/doctoral-dissertation/experiment-1")
 
-files <- dir(pattern="ADRevOTM")
-adrev_group <- lapply(files,create_list)
-names(adrev_group) <- files
-adrev_group <- bind_rows(adrev_group,.id = "Participant")
-
-files <- dir(pattern="ContOTM")
-control_group <- lapply(files,create_list)
-names(control_group) <- files
-control_group <- bind_rows(control_group,.id = "Participant")
-
-complete_data <- bind_rows(adrev_group, control_group, .id = "Group")
-complete_data <- mutate(complete_data,Group=case_when(
-  complete_data$Group==1~'ADr',
-  complete_data$Group==2~'Controle',
-  TRUE~'Error'
-))
-complete_data <- complete_data %>% mutate(hit_stm = case_when(
-  .$HitKey==1 ~ .$ChKey1,
-  .$HitKey==2 ~ .$ChKey2,
-  .$HitKey==3 ~ .$ChKey3,
-  .$HitKey==4 ~ .$ChKey4,
-  TRUE ~ "Error"
-))
+load("complete_data.RData")
 
 #### GLzM ####
 test_data<-complete_data %>% filter(Block%in%c('eq1','reorg1','maint1')) %>%
@@ -52,17 +21,17 @@ test_data <- test_data %>% mutate(trial_type = case_when(
   TRUE ~ as.character(.$trial_type)
 ))
 test_data <- test_data %>% mutate(Group = case_when(
-  .$Group=='ADr' ~ 'Reversão',
+  .$Group=='ADr' ~ 'Revers?o',
   TRUE ~ as.character(.$Group)
 ))
-test_data$Group <- factor(test_data$Group, levels = c("Controle","Reversão"))
+test_data$Group <- factor(test_data$Group, levels = c("Controle","Revers?o"))
 test_data$Block <- factor(test_data$Block, levels = c("eq1", "reorg1"))
 
 model<-test_data %>% glmer(formula = Speed ~ Group*Block + (1|Participant),
                            family = Gamma('identity'))
-summary(model) #modelo
+summary(model) #model
 
-#### Contraste  entre blocos por grupo transformado para a escala original ####
+#### Contrast between blocks by group transformed to the original scale ####
 
 emmeans(model,specs = pairwise~Group:Block,adjust='tukey') %>%
   .$contrasts %>% as.data.frame()
@@ -88,7 +57,7 @@ ggplot(model_emmean,aes(x=Block,y=emmean,group=Group))+
 
 
 ggsave('Contraste exp1_1.png',device = 'png',
-       path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualificação",
+       path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualifica??o",
        width = 10, height = 6, units = "cm")
 
 
@@ -108,7 +77,7 @@ lab<-as_labeller(c(`eq1`='Eq',`reorg1`='Reorg/Manut'))
 ggplot(model_emmean,aes(x=Group,y=emmean,group=Block))+
   geom_line()+geom_point(size=2.5)+geom_errorbar(aes(ymin=emmean-SE,ymax=emmean+SE),width=0.25)+
   #stat_pvalue_manual(blk.grp.contrast,label = "asterisk",y.position = 0.47)+
-  scale_x_discrete(labels = c("Controle","Reversão"))+xlab(label = "")+ylab(label = 'Velocidade')+
+  scale_x_discrete(labels = c("Controle","Revers?o"))+xlab(label = "")+ylab(label = 'Velocidade')+
   theme_classic()+theme(axis.text=element_text(size=11),
                         axis.text.x = element_text(color='black'),
                         axis.title.y=element_text(size=11),
@@ -117,59 +86,6 @@ ggplot(model_emmean,aes(x=Group,y=emmean,group=Block))+
   facet_wrap(~Block,labeller = lab)
 
 ggsave('Contraste exp1_2.png',device = 'png',
-       path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualificação",
+       path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualifica??o",
        width = 10, height = 6, units = "cm")
 
-
-
-#### Testes ####
-test_data <- complete_data %>% filter(Block%in%c('eq1','reorg1','maint1'))
-test_data <- test_data %>%
-  mutate(Block=case_when(.$Block=='maint1'~'reorg1',TRUE~as.character(.$Block)))
-test_data <- test_data %>%
-  group_by(Group,Participant, Block) %>% summarise(Speed=mean(Speed))
-
-mixed.anova <- aov(Speed ~ Group*Block + Error(Participant/Block),
-                   data=test_data)
-summary(mixed.anova)
-
-#efeitos simples principais
-sme.eq <- test_data %>% filter(Block=='eq1')
-anova.sme.eq <-aov(Speed ~ Group,data = sme.eq)
-summary(anova.sme.eq)
-
-sme.reorg <- test_data %>% filter(Block=='reorg1')
-anova.sme.reorg <-aov(Speed ~ Group,data = sme.reorg)
-summary(anova.sme.reorg)
-
-sme.adr <- test_data %>% filter(Group=='ADr')
-anova.sme.adr <-aov(Speed ~ Block + Error(Participant/Block),data = sme.adr)
-summary(anova.sme.adr)
-
-sme.con <- test_data %>% filter(Group=='Controle')
-anova.sme.con <-aov(Speed ~ Block + Error(Participant/Block),data = sme.con)
-summary(anova.sme.con)
-
-#### Figura da interação ####
-complete_data %>% filter(Block%in%c('eq1','reorg1','maint1')) %>%
-  mutate(Block=case_when(.$Block=='maint1'~'reorg1',TRUE~as.character(.$Block))) %>%
-  group_by(Group,Block) %>% summarise(Speed=mean(Speed)) %>%
-  
-  ggplot(aes(x=Block,y=Speed,group=Group,color=Group,shape=Group,
-             fill=Group,linetype=Group)) +
-  geom_line() + geom_point(size=2.5) +
-  scale_shape_manual(values = c(21,22)) +
-  scale_fill_manual(values = c('red','blue')) +
-  scale_color_manual(values = c('red','blue')) +
-  xlab('Bloco') + ylab('Velocidade média (r/s)') +
-  scale_x_discrete(label=c('Equivalência','Reorg./Manut.'))+
-  scale_y_continuous(limits = c(0.36,0.52),expand = c(0,0)) +
-  theme_classic() +
-  theme(axis.title = element_text(size=12, color = 'black'),
-        axis.text = element_text(size = 12,color = 'black'),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 12,color = 'black'))
-
-ggsave('Interação.png',device = 'png',
-       path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualificação/Experimento 1",
-       width = 13, height = 8, units = "cm")
