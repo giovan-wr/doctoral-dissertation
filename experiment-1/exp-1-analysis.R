@@ -51,7 +51,11 @@ test_data <- test_data %>% mutate(trial_type = case_when(
   .$trial_type=='DC' ~ 'CD',
   TRUE ~ as.character(.$trial_type)
 ))
-test_data$Group <- factor(test_data$Group, levels = c("Controle","ADr"))
+test_data <- test_data %>% mutate(Group = case_when(
+  .$Group=='ADr' ~ 'Reversão',
+  TRUE ~ as.character(.$Group)
+))
+test_data$Group <- factor(test_data$Group, levels = c("Controle","Reversão"))
 test_data$Block <- factor(test_data$Block, levels = c("eq1", "reorg1"))
 
 model<-test_data %>% glmer(formula = Speed ~ Group*Block + (1|Participant),
@@ -82,15 +86,6 @@ ggplot(model_emmean,aes(x=Block,y=emmean,group=Group))+
                         strip.text.x = element_text(size = 11))+
   facet_wrap(~Group)
 
-ggplot(model_emmean,aes(x=Block,y=emmean,group=Group,color=Group))+
-  geom_line()+geom_point(size=2.5)+
-  stat_pvalue_manual(grp.blk.contrast,label = "asterisk",y.position = 0.58,step.increase = 0.1)+
-  scale_x_discrete(labels = c("Eq","Reorg"))+xlab(label = "")+ylab(label = 'Velocidade')+
-  theme_classic()+theme(axis.text=element_text(size=11),
-                        axis.text.x = element_text(color='black'),
-                        axis.title.y=element_text(size=11),
-                        axis.text.y = element_text(color='black'),
-                        strip.text.x = element_text(size = 11))
 
 ggsave('Contraste exp1_1.png',device = 'png',
        path = "C:/Users/Giovan WR/Documents/UFSCar/Doutorado/Qualificação",
@@ -113,7 +108,7 @@ lab<-as_labeller(c(`eq1`='Eq',`reorg1`='Reorg/Manut'))
 ggplot(model_emmean,aes(x=Group,y=emmean,group=Block))+
   geom_line()+geom_point(size=2.5)+geom_errorbar(aes(ymin=emmean-SE,ymax=emmean+SE),width=0.25)+
   #stat_pvalue_manual(blk.grp.contrast,label = "asterisk",y.position = 0.47)+
-  scale_x_discrete(labels = c("ADr","Control"))+xlab(label = "")+ylab(label = 'Velocidade')+
+  scale_x_discrete(labels = c("Controle","Reversão"))+xlab(label = "")+ylab(label = 'Velocidade')+
   theme_classic()+theme(axis.text=element_text(size=11),
                         axis.text.x = element_text(color='black'),
                         axis.title.y=element_text(size=11),
